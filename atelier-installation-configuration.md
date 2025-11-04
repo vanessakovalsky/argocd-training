@@ -132,7 +132,7 @@ kubectl rollout restart deployment argocd-server -n argocd
 #### Partie 3 : Créer des utilisateurs
 
 
-**Créer le fichier `argocd-rbac-cm.yaml` :**
+**Créer le fichier `argocd-user-cm.yaml` :**
 ```yaml
 apiVersion: v1
 kind: ConfigMap
