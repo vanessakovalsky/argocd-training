@@ -131,20 +131,49 @@ kubectl rollout restart deployment argocd-server -n argocd
 
 #### Partie 3 : Créer des utilisateurs
 
-```bash
-# Créer le fichier de config
-cat <<EOF | kubectl apply -f -
+
+**Créer le fichier `argocd-rbac-cm.yaml` :**
+```yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: argocd-cm
   namespace: argocd
+labels:
+  app.kubernetes.io/name: argocd-cm
+  app.kubernetes.io/part-of: argocd
 data:
+  # URL de base d'Argo CD (à adapter si tu utilises un Ingress ou un tunnel)
+  url: https://localhost:8080
+  # Ajout des comptes utilisateurs 
   accounts.alice: apiKey, login
   accounts.bob: apiKey, login
-EOF
+  # Config Dex (authentification)
+  dex.config: |
+    connectors:
+    # Exemple de connecteur GitHub (décommente si tu veux l’utiliser)
+    # - type: github
+    #   id: github
+    #   name: GitHub
+    #   config:
+    #     clientID: <TON_CLIENT_ID>
+    #     clientSecret: <TON_CLIENT_SECRET>
+    #     orgs:
+    #     - name: <TON_ORGANISATION>
 
-# Définir les mots de passe
+  # Optionnel : personnalisation du login ArgoCD
+  users.anonymous.enabled: "false"
+
+  # Paramètres pour les clusters
+  repositories: |
+    # Exemple : dépôt Git public
+    # - url: https://github.com/argoproj/argocd-example-apps.git
+  # Optionnel : gestion du timeout
+  timeout.reconciliation: 180s
+```
+* Définir les mots de passe :
+
+```bash
 argocd account update-password --account alice --new-password Alice123!
 argocd account update-password --account bob --new-password Bob123!
 ```
