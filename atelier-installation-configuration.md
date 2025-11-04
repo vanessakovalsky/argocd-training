@@ -171,6 +171,14 @@ data:
   # Optionnel : gestion du timeout
   timeout.reconciliation: 180s
 ```
+**Appliquer :**
+```bash
+kubectl apply -f argocd-user-cm.yaml
+
+# Redémarrer ArgoCD server
+kubectl rollout restart deployment argocd-server -n argocd
+```
+
 * Définir les mots de passe :
 
 ```bash
