@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # URL de base d'Argo CD (à adapter si tu utilises un Ingress ou un tunnel)
+  url: https://localhost:8080
+  # Ajout des comptes utilisateurs 
+  accounts.alice: apiKey, login
+  accounts.bob: apiKey, login
+  # Optionnel : personnalisation du login ArgoCD
+  users.anonymous.enabled: "false"
+
+  # Paramètres pour les clusters
+  repositories: |
+    # Exemple : dépôt Git public
+    # - url: https://github.com/argoproj/argocd-example-apps.git
+  # Optionnel : gestion du timeout
+  timeout.reconciliation: 180s
