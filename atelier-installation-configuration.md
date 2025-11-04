@@ -148,18 +148,6 @@ data:
   # Ajout des comptes utilisateurs 
   accounts.alice: apiKey, login
   accounts.bob: apiKey, login
-  # Config Dex (authentification)
-  dex.config: |
-    connectors:
-    # Exemple de connecteur GitHub (décommente si tu veux l’utiliser)
-    # - type: github
-    #   id: github
-    #   name: GitHub
-    #   config:
-    #     clientID: <TON_CLIENT_ID>
-    #     clientSecret: <TON_CLIENT_SECRET>
-    #     orgs:
-    #     - name: <TON_ORGANISATION>
 
   # Optionnel : personnalisation du login ArgoCD
   users.anonymous.enabled: "false"
