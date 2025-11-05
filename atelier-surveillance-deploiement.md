@@ -43,6 +43,8 @@ kubectl set image deployment/guestbook-ui guestbook-ui=nonexistent:v1.0.0 -n bro
 
 #### Scénario 2 : Ressources insuffisantes
 
+* On revient modifier notre application guestbook
+
 **Créer une app avec requests impossibles :**
 ```bash
 kubectl patch deployment guestbook-ui -n guestbook -p '
@@ -69,9 +71,9 @@ kubectl patch deployment guestbook-ui -n guestbook -p '
 
 **Exercice :**
 1. Observer les pods Pending
-2. Utiliser `kubectl describe pod` pour identifier le problème
+2. Utiliser `kubectl describe pod id du pod -n namespace` pour identifier le problème
 3. Utiliser `kubectl top nodes` pour voir les ressources disponibles
-4. Corriger les requests
+4. Corriger les requests dans la commande ci-dessus et repassez la
 
 #### Points de validation
 - [ ] Problèmes CrashLoopBackOff identifiés et résolus
