@@ -157,7 +157,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
 - ../../base
-namePrefix: blue-
+nameSuffix: -blue
 commonLabels:
   version: blue
 images:
@@ -171,7 +171,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
 - ../../base
-namePrefix: green-
+nameSuffix: -green
 commonLabels:
   version: green
 images:
@@ -182,6 +182,9 @@ images:
 **Étape 2 : Créer les applications ArgoCD**
 
 ```bash
+# Créer le namespace
+kubectl create namespace bluegreen
+
 # Blue (version actuelle)
 argocd app create myapp-blue \
   --repo https://github.com/VOTRE_USERNAME/myapp \
