@@ -2,6 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: migration-db
+  namespace: demoapp
   annotations:
     # Exécuter avant la sync
     argocd.argoproj.io/hook: PreSync
