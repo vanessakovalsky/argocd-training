@@ -105,7 +105,7 @@ spec:
   source:
     repoURL: https://charts.bitnami.com/bitnami
     chart: nginx
-    targetRevision: 13.2.0
+    targetRevision: 22.2.4
     helm:
       parameters:
       - name: service.type
