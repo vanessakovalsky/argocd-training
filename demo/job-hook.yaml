@@ -15,5 +15,5 @@ spec:
       containers:
       - name: migrate
         image: alpine:latest
-        command: ["echo 'coucou'"]
+        command: ["echo", "Coucou"]
       restartPolicy: Never
