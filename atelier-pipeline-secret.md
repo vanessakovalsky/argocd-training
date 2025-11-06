@@ -273,6 +273,9 @@ spec:
               key: api-key
 ```
 
+* Commit et push du fichier de déploiement
+* Créer votre application et vérifier que le pod s'est bien lancer avec le secret
+
 **Étape 5 : Rotation des secrets**
 
 ```bash
