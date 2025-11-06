@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: myapp
-        image: ghcr.io/<VOTRE_USERNAME>/myapp:latest
+        image: ghcr.io/vanessakovalsky/demo-github-actions-app:37368edbc8a0105645a51b79be07f864f114d265
         ports:
         - containerPort: 8080
 ---
