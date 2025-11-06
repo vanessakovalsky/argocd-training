@@ -82,8 +82,10 @@ jobs:
         tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
     
     - name: Update manifests
+      env:
+        CD_REPO_TOKEN: ${{ secrets.CD_REPO_TOKEN }}
       run: |
-        git clone https://${{ secrets.CD_REPO_TOKEN }}@github.com/${{ github.repository }}-cd.git cd-repo
+        git clone https://x-access-token:${CD_REPO_TOKEN}@github.com/${{ github.repository }}-cd.git cd-repo
         cd cd-repo
         sed -i "s|image:.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|" k8s/deployment.yaml
         git config user.name "GitHub Actions"
@@ -158,6 +160,10 @@ argocd app create myapp \
 ```
 
 **Étape 4 : Tester le pipeline**
+
+* Vous devez générer un PAT (menu Mon compte > Settings > Developper settings) avec les droits en lecture et en écriture sur le repository myapp-cd, copier le token généré
+* Sur le dépôt myapp, dans les paramètres du dépôt ajouté un secret nommé CD_REPO_TOKEN et collé la valeur du token généré
+* Ces deux étapes sont nécessaires pour que le pipeline de CI de github action puisse modifier votre manifeste et déclencher votre déploiement sur argocd.
 
 ```bash
 # Modifier l'application
