@@ -1,5 +1,5 @@
-<img width="1440" height="572" alt="image" src="https://github.com/user-attachments/assets/331e17d6-bab3-41ba-8a7d-31b0e1df9492" />### Atelier 3.1 : Déployer votre première application
-#### Pré-requis
+# Atelier 3.1 : Déployer votre première application
+## Pré-requis
 
 * Créer un dépôt sur github et forker le dépôt : https://github.com/argoproj/argocd-example-apps
 
