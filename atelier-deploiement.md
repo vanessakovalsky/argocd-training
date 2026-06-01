@@ -1,4 +1,4 @@
-### Atelier 3.1 : Déployer votre première application
+<img width="1440" height="572" alt="image" src="https://github.com/user-attachments/assets/331e17d6-bab3-41ba-8a7d-31b0e1df9492" />### Atelier 3.1 : Déployer votre première application
 #### Pré-requis
 
 * Créer un dépôt sur github et forker le dépôt : https://github.com/argoproj/argocd-example-apps
@@ -416,3 +416,340 @@ argocd app sync guestbook --watch
 - [ ] Rollback via CLI réussi
 - [ ] Rollback via Git réussi
 - [ ] Compréhension de la différence entre les deux méthodes
+
+
+## Ateliers bonus — Déploiement d'applications ArgoCD
+
+### Atelier Bonus A : Multi-source & ApplicationSet
+**Niveau : intermédiaire | ~30 min**
+
+#### Objectif
+Gérer plusieurs environnements (dev/staging/prod) avec un seul `ApplicationSet`.
+
+#### Étape 1 : Créer la structure Git
+
+```
+apps/
+  guestbook/
+    base/
+      deployment.yaml
+      service.yaml
+      kustomization.yaml
+    overlays/
+      dev/
+        kustomization.yaml      # replicas: 1, image: :dev
+      staging/
+        kustomization.yaml      # replicas: 2, image: :staging
+      prod/
+        kustomization.yaml      # replicas: 3, image: :latest
+```
+
+```yaml
+# overlays/dev/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+bases:
+  - ../../base
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+```
+
+#### Étape 2 : Créer l'ApplicationSet
+
+```yaml
+# applicationset-guestbook.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: guestbook-envs
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - env: dev
+        revision: develop
+      - env: staging
+        revision: main
+      - env: prod
+        revision: main
+  template:
+    metadata:
+      name: 'guestbook-{{env}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/VOTRE_USERNAME/argocd-example-apps
+        targetRevision: '{{revision}}'
+        path: 'apps/guestbook/overlays/{{env}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'guestbook-{{env}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
+```
+
+```bash
+kubectl apply -f applicationset-guestbook.yaml
+
+# Vérifier les 3 applications créées automatiquement
+argocd app list | grep guestbook
+
+# Comparer les ressources entre envs
+kubectl get pods -n guestbook-dev
+kubectl get pods -n guestbook-staging
+kubectl get pods -n guestbook-prod
+```
+
+#### Étape 3 : Valider le comportement différencié
+
+```bash
+# Vérifier que chaque env a bien le bon nombre de replicas
+for env in dev staging prod; do
+  echo "=== $env ==="
+  kubectl get deployment -n guestbook-$env -o jsonpath='{.items[0].spec.replicas}'
+  echo ""
+done
+```
+
+#### Points de validation
+- [ ] 3 applications créées automatiquement par l'ApplicationSet
+- [ ] Chaque environnement a le bon nombre de replicas
+- [ ] Modifier l'overlay `staging` et observer la sync sélective
+
+---
+
+### Atelier Bonus B : Sync Waves & Resource Hooks
+**Niveau : intermédiaire | ~25 min**
+
+#### Objectif
+Contrôler précisément l'ordre de déploiement avec les waves et les hooks.
+
+#### Contexte
+Vous déployez une app qui nécessite : une migration DB → le backend → le frontend, dans cet ordre strict.
+
+#### Étape 1 : Créer les ressources avec waves
+
+```yaml
+# 01-migration-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migration
+  namespace: guestbook
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"   # avant tout le reste
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  template:
+    spec:
+      containers:
+      - name: migration
+        image: busybox
+        command: ['sh', '-c', 'echo "Running migration..." && sleep 5 && echo "Done"']
+      restartPolicy: Never
+```
+
+```yaml
+# 02-backend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: guestbook
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+```
+
+```yaml
+# 03-frontend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: guestbook
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"   # après le backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: nginx:alpine
+```
+
+#### Étape 2 : Observer l'ordre d'exécution
+
+```bash
+# Commiter les 3 fichiers, puis :
+argocd app sync guestbook --watch
+
+# Dans un autre terminal, observer l'ordre :
+kubectl get events -n guestbook --sort-by=.lastTimestamp -w
+```
+
+#### Étape 3 : Ajouter un hook PostSync de notification
+
+```yaml
+# 04-notify-hook.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: notify-deploy
+  namespace: guestbook
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  template:
+    spec:
+      containers:
+      - name: notify
+        image: busybox
+        command: ['sh', '-c', 'echo "Deployment successful! Notifying team..."']
+      restartPolicy: Never
+```
+
+#### Points de validation
+- [ ] La migration s'exécute en premier (wave -1 / PreSync)
+- [ ] Le backend démarre avant le frontend
+- [ ] Le hook PostSync se déclenche uniquement après tout le reste
+- [ ] Les jobs se suppriment automatiquement (`HookSucceeded`)
+
+---
+
+### Atelier Bonus C : Notifications & monitoring avancé
+**Niveau : avancé | ~35 min**
+
+#### Objectif
+Configurer ArgoCD Notifications pour alerter sur les événements de sync.
+
+#### Étape 1 : Installer argocd-notifications
+
+```bash
+kubectl apply -n argocd \
+  -f https://raw.githubusercontent.com/argoproj-labs/argocd-notifications/release-1.2/manifests/install.yaml
+
+# Vérifier l'installation
+kubectl get pods -n argocd | grep notifications
+```
+
+#### Étape 2 : Configurer un trigger Slack (ou log pour test)
+
+```yaml
+# notifications-cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  # Trigger : notifier en cas d'échec de sync
+  trigger.on-sync-failed: |
+    - when: app.status.operationState.phase in ['Error', 'Failed']
+      send: [app-sync-failed]
+
+  # Trigger : notifier quand l'app est Synced
+  trigger.on-sync-succeeded: |
+    - when: app.status.operationState.phase in ['Succeeded']
+      send: [app-sync-succeeded]
+
+  # Template de notification (log pour test)
+  template.app-sync-failed: |
+    message: |
+      Application {{.app.metadata.name}} sync FAILED.
+      Revision: {{.app.status.sync.revision}}
+      Error: {{.app.status.operationState.message}}
+
+  template.app-sync-succeeded: |
+    message: |
+      Application {{.app.metadata.name}} synced successfully.
+      Revision: {{.app.status.sync.revision}}
+```
+
+```bash
+kubectl apply -f notifications-cm.yaml
+```
+
+#### Étape 3 : Annoter une application pour activer les notifications
+
+```bash
+# Activer les deux triggers sur l'app guestbook
+kubectl annotate app guestbook -n argocd \
+  notifications.argoproj.io/subscribe.on-sync-failed.log="" \
+  notifications.argoproj.io/subscribe.on-sync-succeeded.log=""
+```
+
+#### Étape 4 : Déclencher et observer
+
+```bash
+# Provoquer un échec de sync : pointer vers un path inexistant
+argocd app set guestbook --path nonexistent-path
+argocd app sync guestbook
+
+# Observer les logs du controller notifications
+kubectl logs -n argocd \
+  deployment/argocd-notifications-controller -f
+
+# Corriger le path
+argocd app set guestbook --path guestbook
+argocd app sync guestbook
+# Vous devriez voir la notification de succès dans les logs
+```
+
+#### Étape 5 (optionnel) : Webhook vers un endpoint HTTP
+
+```yaml
+# Dans le ConfigMap, ajouter :
+  service.webhook.my-webhook: |
+    url: https://webhook.site/VOTRE_UUID  # Créer un endpoint sur webhook.site
+    headers:
+    - name: Content-Type
+      value: application/json
+```
+
+```bash
+# Remplacer "log" par "my-webhook" dans les annotations
+kubectl annotate app guestbook -n argocd \
+  notifications.argoproj.io/subscribe.on-sync-succeeded.my-webhook="" \
+  --overwrite
+```
+
+#### Points de validation
+- [ ] argocd-notifications installé et fonctionnel
+- [ ] Notification d'échec visible dans les logs lors d'un sync raté
+- [ ] Notification de succès visible après correction
+- [ ] (Bonus) Webhook externe reçoit la notification sur webhook.site
+
