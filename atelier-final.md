@@ -850,3 +850,122 @@ argocd app wait ecommerce-prod --health --timeout 300
 - [ ] Rollback testé
 - [ ] Self-heal vérifié
 - [ ] Promotion dev → staging → prod testée
+
+
+Voici l'atelier bonus :
+
+---
+
+# Atelier bonus — Monitoring ArgoCD avec Prometheus & Grafana
+
+**Durée estimée : 25 min | Prérequis : ArgoCD installé sur Minikube**---
+
+## Étape 1 — Installer Prometheus & Grafana via Helm (5 min)
+
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+helm install monitoring prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  --create-namespace \
+  --set grafana.adminPassword=admin123 \
+  --wait
+```
+
+Vérifie que tout est up :
+
+```bash
+kubectl get pods -n monitoring
+```
+
+---
+
+## Étape 2 — Configurer le scraping des pods ArgoCD (5 min)
+
+Prometheus doit savoir où scraper. Crée un `PodMonitor` qui cible les 3 replicas du controller :
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: argocd-controller
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - argocd
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-application-controller
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 15s
+      path: /metrics
+EOF
+```
+
+Le label `release: monitoring` est important — il permet au Prometheus opéré par kube-prometheus-stack de découvrir ce `PodMonitor`.
+
+Vérifie que Prometheus a bien détecté les targets (attends ~30s) :
+
+```bash
+kubectl port-forward -n monitoring svc/monitoring-kube-prometheus-prometheus 9090:9090 &
+# Ouvre http://localhost:9090/targets
+# Tu dois voir 3 targets argocd-controller UP
+```
+
+---
+
+## Étape 3 — Importer le dashboard Grafana (5 min)
+
+ArgoCD fournit un dashboard officiel sur Grafana.com (ID `14584`).
+
+```bash
+kubectl port-forward -n monitoring svc/monitoring-grafana 3000:80 &
+```
+
+Ouvre `http://localhost:3000` → login `admin` / `admin123`
+
+Puis : **Dashboards → Import → ID `14584` → Load → Datasource : Prometheus → Import**
+
+---
+
+## Étape 4 — Vérifier les métriques clés (5 min)
+
+Dans le dashboard ou via PromQL directement sur `http://localhost:9090` :
+
+```promql
+# Nombre d'apps par état de santé
+argocd_app_info{health_status="Healthy"}
+
+# Apps en erreur de sync
+argocd_app_info{sync_status="OutOfSync"}
+
+# Durée moyenne de reconciliation par shard
+rate(argocd_app_reconcile_duration_seconds_sum[5m])
+/ rate(argocd_app_reconcile_duration_seconds_count[5m])
+
+# Nombre de syncs par app sur les 5 dernières minutes
+rate(argocd_app_sync_total[5m])
+```
+
+---
+
+## Étape 5 — Cleanup (1 min)
+
+```bash
+pkill -f "port-forward"
+helm uninstall monitoring -n monitoring
+kubectl delete podmonitor argocd-controller -n monitoring
+kubectl delete namespace monitoring
+```
+
+---
+
+**Ce que tu as mis en place :
+
+** Prometheus scrape les 3 pods du controller indépendamment (ce qui résout le problème de sharding vu précédemment), et Grafana agrège tout dans un dashboard unique avec les métriques `argocd_app_*` consolidées sur l'ensemble du cluster.
