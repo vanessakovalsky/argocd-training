@@ -10,6 +10,10 @@ Installer ArgoCD sur votre cluster Kubernetes et accéder à l'interface web.
 * Sous linux:
 ```
 sudo apt install docker minikube kubectl -y
+# ou avec snap
+sudo snap install docker --classic
+sudo snap install kubectl --classic
+sudo snap install minikube --classic
 minikube start --driver=docker
 ```
 
