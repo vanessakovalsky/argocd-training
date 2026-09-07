@@ -3,6 +3,17 @@
 #### Objectif
 Installer ArgoCD sur votre cluster Kubernetes et accéder à l'interface web.
 
+### Pré-requis
+
+* Avoir un cluster kubernetes
+* Pour l'installer
+* Sous linux:
+```
+sudo apt install docker minikube kubectl -y
+minikube start --driver=docker
+```
+
+
 #### Instructions
 
 **Étape 1 : Préparation**
