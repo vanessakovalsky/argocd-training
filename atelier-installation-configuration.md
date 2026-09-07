@@ -13,7 +13,15 @@ sudo apt install docker minikube kubectl -y
 # ou avec snap
 sudo snap install docker --classic
 sudo snap install kubectl --classic
-sudo snap install minikube --classic
+# installation de minikube en dernière version : 
+curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube && rm minikube-linux-amd64
+# Pour accéder à docker sans root : 
+ sudo groupadd docker
+ sudo usermod -aG docker $USER
+# Rédemarrer la VM après pour que ce soit pris en compte
+
+
 minikube start --driver=docker
 ```
 
