@@ -5,7 +5,7 @@ metadata:
   labels:
     app: nginx
 spec:
-  replicas: 8
+  replicas: 3
   selector:
     matchLabels:
       app: nginx
@@ -17,6 +17,6 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx:latest
+        image: nginx:1.31
         ports:
         - containerPort: 80
