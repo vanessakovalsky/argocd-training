@@ -342,8 +342,8 @@ Apprendre à gérer l'historique et effectuer des rollbacks.
 ```bash
 # Modification 1 : Changer l'image
 # Éditer guestbook-ui-deployment.yaml
-# Changer l'image de gcr.io/heptio-images/ks-guestbook-demo:0.1
-# à gcr.io/heptio-images/ks-guestbook-demo:0.2
+# Changer l'image de gcr.io/google-samples/gb-frontend:v5
+# à hekai/gcr.io_heptio-images_ks-guestbook-demo_0.2
 
 git add .
 git commit -m "Update to version 0.2"
