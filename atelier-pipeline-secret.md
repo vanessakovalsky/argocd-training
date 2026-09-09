@@ -46,7 +46,7 @@ EOF
 
 # Créer le workflow GitHub Actions
 mkdir -p .github/workflows
-cat > .github/workflows/deploy.yml <<'EOF'
+cat > .github/workflows/main.yml <<'EOF'
 name: Build and Deploy
 
 on:
