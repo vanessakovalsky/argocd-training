@@ -444,20 +444,35 @@ apps/
         kustomization.yaml      # replicas: 3, image: :latest
 ```
 
+* Les fichiers deployment.yaml et svc.yaml est un copier coller de l'atelier 3.1
+
 ```yaml
+# base/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - deployment.yaml
+  - svc.yaml
+```
+
+```yaml
+# overlays/prod/kustomization.yaml
+# overlays/staging/kustomization.yaml
 # overlays/dev/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-bases:
-  - ../../base
 patches:
-  - patch: |-
-      - op: replace
-        path: /spec/replicas
-        value: 1
-    target:
-      kind: Deployment
+- patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 1
+  target:
+    kind: Deployment
+resources:
+- ../../base
 ```
+
+* Une fois les fichiers créés, n'oubliez pas de créer une branch develop à partir de master pour le déploiement de l'environement de dev
 
 #### Étape 2 : Créer l'ApplicationSet
 
@@ -475,9 +490,9 @@ spec:
       - env: dev
         revision: develop
       - env: staging
-        revision: main
+        revision: master
       - env: prod
-        revision: main
+        revision: master
   template:
     metadata:
       name: 'guestbook-{{env}}'
