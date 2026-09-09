@@ -215,11 +215,11 @@ kubectl get pods -n bluegreen -l version=green
 
 # Tester blue
 kubectl port-forward -n bluegreen svc/myapp-blue 8080:80
-curl localhost:8080  # Devrait retourner une page nginx 1.19
+curl -I localhost:8080  # Devrait retourner une page nginx 1.19
 
 # Tester green
 kubectl port-forward -n bluegreen svc/myapp-green 8081:80
-curl localhost:8081  # Devrait retourner une page nginx 1.20
+curl -I localhost:8081  # Devrait retourner une page nginx 1.20
 ```
 
 **Étape 4 : Gérer le front**
@@ -271,13 +271,13 @@ kubectl patch service myapp -n bluegreen -p '{"spec":{"selector":{"version":"blu
 
 # Tester
 kubectl port-forward -n bluegreen svc/myapp 8082:80
-curl localhost:8082  # Devrait retourner nginx 1.19
+curl -I localhost:8082  # Devrait retourner nginx 1.19
 
 # Basculer vers green
 kubectl patch service myapp -n bluegreen -p '{"spec":{"selector":{"version":"green"}}}'
 
 # Tester à nouveau
-curl localhost:8082  # Devrait maintenant retourner nginx 1.20
+curl -I localhost:8082  # Devrait maintenant retourner nginx 1.20
 
 # Rollback si nécessaire
 kubectl patch service myapp -n bluegreen -p '{"spec":{"selector":{"version":"blue"}}}'
@@ -309,7 +309,7 @@ Mettre en place un déploiement canary progressif avec Argo Rollouts.
 ```bash
 # Installer le contrôleur Argo Rollouts
 kubectl create namespace argo-rollouts
-kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
+kubectl apply --server-side -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
 
 # Installer le plugin kubectl
 curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
