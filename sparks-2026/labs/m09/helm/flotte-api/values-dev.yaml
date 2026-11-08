@@ -1,0 +1,4 @@
+# flotte-api: dev overrides
+replicaCount: 1
+ui:
+  color: "#2e7d32"

@@ -1,0 +1,38 @@
+# Pipeline of flotte-app: build and publish the image, then update flotte-config.
+# The pipeline never accesses the Kubernetes cluster (GitOps pull model).
+# CI/CD variables to define in flotte-app (Settings > CI/CD > Variables):
+#   FLOTTE_CONFIG_URL    https://gitlab.com/<GITLAB_USER>/flotte-config.git (without credentials)
+#   FLOTTE_CONFIG_TOKEN  token with write_repository on flotte-config (masked, protected)
+stages:
+  - build
+  - update-config
+
+variables:
+  IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+
+build-image:
+  stage: build
+  image: docker:28
+  services:
+    - docker:28-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" |
+        docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - docker build --build-arg GIT_SHA="$CI_COMMIT_SHA" -t "$IMAGE" .
+    - docker push "$IMAGE"
+
+update-config:
+  stage: update-config
+  image: alpine:3.22
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  variables:
+    CONFIG_REPO_URL: $FLOTTE_CONFIG_URL
+    CONFIG_TOKEN: $FLOTTE_CONFIG_TOKEN
+    NEW_IMAGE: $IMAGE
+  before_script:
+    - apk add --no-cache git kustomize
+  script:
+    - sh ci/update-config.sh

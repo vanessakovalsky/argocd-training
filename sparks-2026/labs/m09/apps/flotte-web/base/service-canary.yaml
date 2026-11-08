@@ -1,0 +1,9 @@
+# Service targeting canary pods only (selector completed by Argo Rollouts)
+apiVersion: v1
+kind: Service
+metadata:
+  name: flotte-web-canary
+  labels: {app.kubernetes.io/name: flotte-web}
+spec:
+  selector: {app.kubernetes.io/name: flotte-web}
+  ports: [{name: http, port: 80, targetPort: http}]

@@ -1,0 +1,11 @@
+# Example: delegate authentication to an OIDC provider (Keycloak, Entra ID, Okta).
+# Not used in the lab (no identity provider in the training environment).
+# Client secret stored in argocd-secret under the key oidc.flotte.clientSecret.
+data:
+  url: https://argocd.example.com
+  oidc.config: |
+    name: Annuaire Hexa Mobilite
+    issuer: https://<IDP>/realms/hexa
+    clientID: argocd
+    clientSecret: $oidc.flotte.clientSecret
+    requestedScopes: ["openid", "profile", "email", "groups"]

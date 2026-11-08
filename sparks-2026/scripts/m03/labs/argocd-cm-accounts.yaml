@@ -1,0 +1,5 @@
+data:
+  accounts.dev-alice: login
+  accounts.ops-bob: login
+  accounts.audit-claire: login
+  accounts.ci-gitlab: apiKey

@@ -1,0 +1,9 @@
+# flotte-api: shared values (podinfo chart 6.17.0)
+ui:
+  message: "Hexa Mobilite - API"
+resources:
+  requests:
+    cpu: 50m
+    memory: 32Mi
+  limits:
+    memory: 128Mi

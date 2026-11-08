@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flotte-web-prod
+  namespace: argocd
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: flotte
+  source:
+    repoURL: https://gitlab.com/<GITLAB_USER>/flotte-config.git
+    targetRevision: v1.0.0
+    path: apps/flotte-web/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: flotte-prod
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+

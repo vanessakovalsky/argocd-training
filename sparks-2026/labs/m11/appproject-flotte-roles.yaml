@@ -1,0 +1,27 @@
+# AppProject "flotte" with a project role for the CI (declarative version of M11).
+# Replace ${GITLAB_USER}. JWT tokens are issued with:
+#   argocd proj role create-token flotte ci-deployer --expires-in 168h
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: flotte
+  namespace: argocd
+spec:
+  description: Applications Hexa Mobilite (flotte-web, flotte-api)
+  sourceRepos:
+    - https://gitlab.com/${GITLAB_USER}/flotte-config.git
+    - https://stefanprodan.github.io/podinfo
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "flotte-*"
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  orphanedResources:
+    warn: true
+  roles:
+    - name: ci-deployer
+      description: "Pipeline CI : synchronisation des applications du projet"
+      policies:
+        - p, proj:flotte:ci-deployer, applications, get, flotte/*, allow
+        - p, proj:flotte:ci-deployer, applications, sync, flotte/flotte-*, allow

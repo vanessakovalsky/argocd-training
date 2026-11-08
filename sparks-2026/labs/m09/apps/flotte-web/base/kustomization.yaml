@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Teaches Kustomize the structure of a Rollout (Argo Rollouts v1.10.2 docs)
+configurations:
+  - rollout-transform.yaml
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: hexa-mobilite
+resources:
+  - rollout.yaml
+  - service.yaml
+  - service-canary.yaml
+  - analysis-template.yaml
+  - hook-presync-migration.yaml
+  - hook-postsync-smoke-test.yaml
+configMapGenerator:
+  - name: flotte-web-config
+    literals:
+      - PODINFO_UI_MESSAGE=Hexa Mobilite - suivi de flotte
+      - PODINFO_UI_COLOR=#34577c
+    options:
+      annotations:
+        argocd.argoproj.io/sync-wave: "-1"
+        # Keep previous generated ConfigMaps: still used by stable pods (rollback, abort)
+        argocd.argoproj.io/sync-options: Prune=false
+        argocd.argoproj.io/compare-options: IgnoreExtraneous
+images:
+  - name: ghcr.io/stefanprodan/podinfo
+    newTag: 6.16.0

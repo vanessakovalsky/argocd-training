@@ -1,0 +1,23 @@
+# Merge patch for argocd-notifications-cm (kubectl patch --type merge --patch-file)
+data:
+  service.webhook.flotte-alertes: |
+    url: http://alertes-receiver.flotte-ops.svc.cluster.local/argocd
+    headers:
+      - name: Content-Type
+        value: application/json
+  template.flotte-webhook: |
+    webhook:
+      flotte-alertes:
+        method: POST
+        body: |
+          {"application": "{{.app.metadata.name}}",
+           "sync": "{{.app.status.sync.status}}",
+           "health": "{{.app.status.health.status}}",
+           "revision": "{{.app.status.sync.revision}}"}
+  trigger.flotte-deployed: |
+    - when: app.status.operationState != nil and app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+      oncePer: app.status.sync.revision
+      send: [flotte-webhook]
+  trigger.flotte-degraded: |
+    - when: app.status.health.status == 'Degraded'
+      send: [flotte-webhook]

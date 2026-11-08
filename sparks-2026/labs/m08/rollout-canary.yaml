@@ -1,0 +1,45 @@
+# flotte-web as an Argo Rollout, canary strategy (replaces deployment.yaml)
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: flotte-web
+  labels:
+    app.kubernetes.io/name: flotte-web
+    app.kubernetes.io/part-of: hexa-mobilite
+spec:
+  replicas: 4
+  progressDeadlineSeconds: 60
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: flotte-web
+  strategy:
+    canary:
+      steps:
+        - setWeight: 25
+        - pause: {duration: 30s}
+        - setWeight: 50
+        - pause: {}
+        - setWeight: 100
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: flotte-web
+        app.kubernetes.io/part-of: hexa-mobilite
+    spec:
+      containers:
+        - name: flotte-web
+          image: ghcr.io/stefanprodan/podinfo:6.16.0
+          ports:
+            - name: http
+              containerPort: 9898
+          envFrom:
+            - configMapRef:
+                name: flotte-web-config
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+          resources:
+            requests: {cpu: 50m, memory: 32Mi}
+            limits: {memory: 128Mi}

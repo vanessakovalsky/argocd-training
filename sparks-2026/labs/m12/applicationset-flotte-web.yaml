@@ -1,0 +1,42 @@
+# ApplicationSet: one Application per overlay of apps/flotte-web (prod excluded: manual, tag).
+# Replaces the hand-written flotte-web-dev and flotte-web-recette (adopted, same names).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: flotte-web
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://gitlab.com/<GITLAB_USER>/flotte-config.git
+        revision: main
+        directories:
+          - path: apps/flotte-web/overlays/*
+          - path: apps/flotte-web/overlays/prod
+            exclude: true
+  template:
+    metadata:
+      name: 'flotte-web-{{.path.basename}}'
+      annotations:
+        notifications.argoproj.io/subscribe.flotte-deployed.flotte-alertes: ""
+        notifications.argoproj.io/subscribe.flotte-degraded.flotte-alertes: ""
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: flotte
+      source:
+        repoURL: https://gitlab.com/<GITLAB_USER>/flotte-config.git
+        targetRevision: main
+        path: '{{.path.path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'flotte-{{.path.basename}}'
+      syncPolicy:
+        automated:
+          enabled: true
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

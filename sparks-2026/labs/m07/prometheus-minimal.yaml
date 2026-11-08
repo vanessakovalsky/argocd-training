@@ -1,0 +1,52 @@
+# Minimal Prometheus (training only: no persistence, no alerting) scraping Argo CD metrics
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: flotte-ops
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+      - job_name: argocd-application-controller
+        static_configs:
+          - targets: ["argocd-metrics.argocd.svc.cluster.local:8082"]
+      - job_name: argocd-server
+        static_configs:
+          - targets: ["argocd-server-metrics.argocd.svc.cluster.local:8083"]
+      - job_name: argocd-repo-server
+        static_configs:
+          - targets: ["argocd-repo-server.argocd.svc.cluster.local:8084"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: flotte-ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: prometheus}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: prometheus}
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v3.16.0
+          args: ["--config.file=/etc/prometheus/prometheus.yml"]
+          ports: [{name: http, containerPort: 9090}]
+          volumeMounts: [{name: config, mountPath: /etc/prometheus}]
+      volumes:
+        - name: config
+          configMap: {name: prometheus-config}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: flotte-ops
+spec:
+  selector: {app.kubernetes.io/name: prometheus}
+  ports: [{name: http, port: 9090, targetPort: http}]

@@ -1,0 +1,18 @@
+# AppProject "flotte" (Hexa Mobilite) - replace ${GITLAB_USER}
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: flotte
+  namespace: argocd
+spec:
+  description: Applications Hexa Mobilite (flotte-web)
+  sourceRepos:
+    - https://gitlab.com/${GITLAB_USER}/flotte-config.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "flotte-*"
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  orphanedResources:
+    warn: true

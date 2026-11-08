@@ -1,0 +1,24 @@
+{
+  "object_kind": "push",
+  "event_name": "push",
+  "ref": "refs/heads/main",
+  "before": "0000000000000000000000000000000000000000",
+  "after": "<SHA_COMPLET>",
+  "project": {
+    "name": "flotte-config",
+    "web_url": "https://gitlab.com/<GITLAB_USER>/flotte-config",
+    "git_http_url": "https://gitlab.com/<GITLAB_USER>/flotte-config.git",
+    "git_ssh_url": "git@gitlab.com:<GITLAB_USER>/flotte-config.git",
+    "default_branch": "main"
+  },
+  "commits": [
+    {
+      "id": "<SHA_COMPLET>",
+      "message": "test webhook",
+      "added": [],
+      "modified": ["apps/flotte-web/overlays/dev/kustomization.yaml"],
+      "removed": []
+    }
+  ],
+  "total_commits_count": 1
+}

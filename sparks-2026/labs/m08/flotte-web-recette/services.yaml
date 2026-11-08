@@ -1,0 +1,18 @@
+# Active service (production traffic) and preview service (new version under test)
+apiVersion: v1
+kind: Service
+metadata:
+  name: flotte-web
+  labels: {app.kubernetes.io/name: flotte-web}
+spec:
+  selector: {app.kubernetes.io/name: flotte-web}
+  ports: [{name: http, port: 80, targetPort: http}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flotte-web-preview
+  labels: {app.kubernetes.io/name: flotte-web}
+spec:
+  selector: {app.kubernetes.io/name: flotte-web}
+  ports: [{name: http, port: 80, targetPort: http}]

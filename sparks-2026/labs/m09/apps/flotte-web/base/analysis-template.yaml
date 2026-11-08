@@ -1,0 +1,22 @@
+# Automatic canary check: 3 HTTP probes on the canary service, 1 failure allowed
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: flotte-smoke
+spec:
+  metrics:
+    - name: readyz
+      count: 3
+      interval: 10s
+      failureLimit: 1
+      provider:
+        job:
+          spec:
+            backoffLimit: 0
+            template:
+              spec:
+                restartPolicy: Never
+                containers:
+                  - name: check
+                    image: curlimages/curl:8.17.0
+                    command: ["curl", "-fsS", "--max-time", "5", "http://flotte-web-canary/readyz"]

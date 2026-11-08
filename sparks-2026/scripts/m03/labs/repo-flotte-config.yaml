@@ -1,0 +1,14 @@
+# Private GitLab repository, read-only deploy token - replace the ${...} values
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-flotte-config
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  type: git
+  url: https://gitlab.com/${GITLAB_USER}/flotte-config.git
+  project: flotte
+  username: ${GITLAB_DEPLOY_USER}
+  password: ${GITLAB_DEPLOY_TOKEN}

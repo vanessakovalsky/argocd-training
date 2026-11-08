@@ -1,0 +1,6 @@
+# Hardening of argocd-cm (merge patch). Apply ONLY when ops-bob (role:admin) works.
+data:
+  admin.enabled: "false"
+  users.anonymous.enabled: "false"
+  exec.enabled: "false"
+  users.session.duration: "8h"

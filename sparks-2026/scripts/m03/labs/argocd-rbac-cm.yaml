@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-rbac-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  policy.default: ""
+  scopes: "[groups]"
+  policy.csv: |
+    # Equipe dev : deploie et synchronise les applications du projet flotte
+    p, role:dev, applications, get, flotte/*, allow
+    p, role:dev, applications, create, flotte/*, allow
+    p, role:dev, applications, update, flotte/*, allow
+    p, role:dev, applications, sync, flotte/*, allow
+    p, role:dev, logs, get, flotte/*, allow
+    p, role:dev, projects, get, flotte, allow
+    # Pipeline CI : lecture et synchronisation uniquement
+    p, role:ci, applications, get, flotte/*, allow
+    p, role:ci, applications, sync, flotte/*, allow
+    # Affectations
+    g, dev-alice, role:dev
+    g, ci-gitlab, role:ci
+    g, ops-bob, role:admin
+    g, audit-claire, role:readonly

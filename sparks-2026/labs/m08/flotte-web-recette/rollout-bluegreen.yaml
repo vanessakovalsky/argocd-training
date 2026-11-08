@@ -1,0 +1,40 @@
+# flotte-web in recette: blue-green strategy (active + preview services)
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: flotte-web
+  labels:
+    app.kubernetes.io/name: flotte-web
+    app.kubernetes.io/part-of: hexa-mobilite
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: flotte-web
+  strategy:
+    blueGreen:
+      activeService: flotte-web
+      previewService: flotte-web-preview
+      autoPromotionEnabled: false
+      scaleDownDelaySeconds: 30
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: flotte-web
+        app.kubernetes.io/part-of: hexa-mobilite
+    spec:
+      containers:
+        - name: flotte-web
+          image: ghcr.io/stefanprodan/podinfo:6.16.0
+          ports:
+            - name: http
+              containerPort: 9898
+          envFrom:
+            - configMapRef:
+                name: flotte-web-config
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+          resources:
+            requests: {cpu: 50m, memory: 32Mi}
+            limits: {memory: 128Mi}

@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - service-preview.yaml
+replicas:
+  - name: flotte-web
+    count: 2
+patches:
+  # Recette: blue-green instead of the canary strategy of the base
+  - target: {group: argoproj.io, kind: Rollout, name: flotte-web}
+    patch: |-
+      - op: replace
+        path: /spec/strategy
+        value:
+          blueGreen:
+            activeService: flotte-web
+            previewService: flotte-web-preview
+            autoPromotionEnabled: false
+            scaleDownDelaySeconds: 30
+configMapGenerator:
+  - name: flotte-web-config
+    behavior: merge
+    literals:
+      - PODINFO_UI_MESSAGE=Hexa Mobilite - RECETTE
