@@ -11,7 +11,7 @@ Versions relevées le 08/11/2026 sur les dépôts officiels ; source unique : `s
 | Processeur | 4 vCPU minimum | `nproc` |
 | Mémoire | 8 Go **disponibles** (16 Go installés conseillés) | `free -g` |
 | Disque | 20 Go libres (images) | `df -h ~` |
-| Moteur de conteneurs | Docker 25 ou plus récent (testé : 25.0.3), ou Podman 5 **[À VÉRIFIER]** | `docker info` |
+| Moteur de conteneurs | Docker 25 ou plus récent (testé : 25.0.3) ; Podman possible, non testé (§ 6) | `docker info` |
 | Droits | Utilisateur membre du groupe `docker` | `id -nG` |
 | Réseau | Accès HTTPS à `github.com`, `raw.githubusercontent.com`, `ghcr.io`, `quay.io`, `public.ecr.aws`, `docker.io`, `registry.k8s.io`, `get.helm.sh`, `dl.k8s.io`, `gitlab.com`, `registry.gitlab.com`, `stefanprodan.github.io` | `scripts/setup/preflight.sh` |
 | Ports libres | 8080 (port-forward) et 8443 (accès NodePort) | `ss -ltn` |
@@ -97,12 +97,14 @@ export FLOTTE_REPO_URL=https://gitlab.com/<GITLAB_USER>/flotte-config.git
 M03 : `GITLAB_USER`, `GITLAB_DEPLOY_USER`, `GITLAB_DEPLOY_TOKEN` (jeton de déploiement de `flotte-config`, portée `read_repository`). Le M10 n'a pas de script automatique (pipeline lié au projet GitLab du stagiaire) : voir ses corrections.
 
 ## 6. Autres systèmes
+Labs testés sur Linux avec Docker. macOS, Windows et Podman : procédures issues des documentations officielles, non rejouées → `scripts/setup/preflight.sh` obligatoire à J-7 sur ces postes ; Podman déconseillé pour la session (support expérimental de kind).
+
 
 | Système | Adaptation |
 |---|---|
-| macOS (Apple Silicon) | Docker Desktop ; binaires `darwin-arm64` des mêmes versions, ou `brew install kind kubectl argocd helm kubeseal argoproj/tap/kubectl-argo-rollouts` (versions Homebrew à contrôler) **[À VÉRIFIER]** |
-| Windows | WSL 2 (Ubuntu) + Docker Desktop avec intégration WSL ; suivre la procédure Linux dans WSL **[À VÉRIFIER]** |
-| Podman | `export KIND_EXPERIMENTAL_PROVIDER=podman` avant `kind create cluster` **[À VÉRIFIER : labs testés avec Docker uniquement]** |
+| macOS (Apple Silicon) | Docker Desktop ; binaires `darwin-arm64` des mêmes versions, ou `brew install kind kubernetes-cli argocd helm kubeseal argoproj/tap/kubectl-argo-rollouts` (Homebrew le 08/11/2026 : kind 0.33.0, argocd 3.6.1, helm 4.3.1, kubeseal 0.41.2 ; kubectl 1.37.2, compatible à ± 1 version mineure avec le nœud 1.36) |
+| Windows | WSL 2 (Ubuntu) + Docker Desktop avec intégration WSL activée pour la distribution ; procédure Linux dans WSL |
+| Podman | Support expérimental de kind (Podman 3.0 ou plus, cgroup v2, mode rootless avec réglages systemd) : `export KIND_EXPERIMENTAL_PROVIDER=podman` avant `kind create cluster` ; images par `podman save` + `kind load image-archive` |
 
 ## 7. Nettoyage après la formation
 
@@ -112,4 +114,4 @@ M03 : `GITLAB_USER`, `GITLAB_DEPLOY_USER`, `GITLAB_DEPLOY_TOKEN` (jeton de dépl
 | Images locales | `docker image prune -a` (après accord) | Aucun |
 | Outils | `rm ~/.local/bin/{kind,kubectl,argocd,helm,kubectl-argo-rollouts,kubeseal}` | Aucun |
 | Jetons GitLab | Révoquer `formation-argocd` et les jetons de déploiement | Aucun |
-| Projets GitLab | Conserver (révision) ou supprimer (*Settings* → *General* → *Advanced*) | Suppression différée possible côté GitLab **[À VÉRIFIER : délai de rétention]** |
+| Projets GitLab | Conserver (révision) ou supprimer (page du projet → menu *Actions* ⋮ → *Delete*) | GitLab.com : projet en attente de suppression 30 jours ; *Delete permanently* sur le projet en attente pour une suppression immédiate |

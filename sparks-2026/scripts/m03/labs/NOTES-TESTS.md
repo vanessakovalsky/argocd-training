@@ -14,6 +14,7 @@ Module 03 redige (fr/module-03-configuration-acces-*). Notes de tests conservees
   CreateNamespace OK (Namespace en clusterResourceWhitelist).
 - Builtin policy 3.6 : action `rollback` distincte de `sync` (a utiliser au M06).
 - admin.enabled "false" -> "Account admin is disabled" (teste puis reactive).
-- Dex GitLab (defi SSO) : callback `https://<ARGOCD>/api/dex/callback`, ne pas fixer redirectURI ; NON TESTE.
+- Dex GitLab (defi SSO) : callback `https://<ARGOCD>/api/dex/callback`, ne pas fixer redirectURI ; teste jusqu'a la redirection
+  gitlab.com/oauth/authorize (redirect_uri et scope read_user openid conformes) ; login reel non teste (app OAuth requise).
 - Depot de test = argocd-example-apps (public) ; en lab : https://gitlab.com/<GITLAB_USER>/flotte-config.git
   + deploy token (username/password dans le Secret) [A VERIFIER, non teste].
