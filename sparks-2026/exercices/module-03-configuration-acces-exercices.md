@@ -80,10 +80,12 @@ Variables : `<ADMIN_PASSWORD>` = mot de passe `admin` défini au M02.
    cat argocd-rbac-cm.yaml
    argocd admin settings rbac validate --policy-file argocd-rbac-cm.yaml
    ```
-   Résultat attendu (dernière ligne) :
+   Résultat attendu (deux dernières lignes) :
    ```
+   {"level":"warning","msg":"user defined roles not found in policies: role:admin,role:readonly",...}
    Policy is valid.
    ```
+   > ⚠️ **Warning attendu** : `role:admin` et `role:readonly` = rôles intégrés (`builtin-policy.csv`, compilée dans ArgoCD), absents du fichier validé → signalés à tort par `validate`, mais bien appliqués (vérification : `argocd admin settings rbac can ops-bob delete applications 'default/guestbook' --policy-file argocd-rbac-cm.yaml` → `Yes`). Warning à corriger s'il cite un rôle personnalisé (ex. faute de frappe dans `role:dev` → ligne `g` sans effet).
 4. Appliquer la politique.
    ```bash
    kubectl apply --server-side --force-conflicts -f argocd-rbac-cm.yaml
