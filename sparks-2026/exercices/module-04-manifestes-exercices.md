@@ -152,5 +152,46 @@ Variables : `<FLOTTE_CONFIG>` = chemin du clone local de `flotte-config` ; `<FOR
 
 ---
 
+## Défi 04.5 ⭐⭐⭐ — Applications déclarées dans le namespace de l'équipe (autonome)
+**Durée** : 25 min · **Objectif** : autoriser une équipe à gérer ses ressources Application hors du namespace `argocd` (*apps in any namespace*)
+**Contexte** : l'équipe dev veut créer ses Applications avec `kubectl apply` dans son propre namespace `flotte-apps`, sans aucun droit Kubernetes sur `argocd`.
+
+**Énoncé** :
+- Déclarer `flotte-apps` comme namespace d'Applications surveillé (`argocd-cmd-params-cm`), puis redémarrer les composants concernés.
+- Créer dans `flotte-apps` une Application `flotte-web-team` (projet `flotte`, `flotte-config`, chemin `apps/flotte-web`, destination `flotte-team`, synchronisation automatique, création du namespace).
+- Constater le refus, puis autoriser ce namespace d'origine dans le projet `flotte` uniquement.
+- Créer la même Application dans un namespace non déclaré (`flotte-dev`) et observer.
+- Retrouver le nom complet de l'application dans `argocd app list` et l'objet RBAC correspondant.
+- Nettoyer : Application supprimée, namespaces `flotte-apps` et `flotte-team` supprimés, paramètre retiré.
+
+**Indices** : clé `application.namespaces` ; champ `spec.sourceNamespaces` de l'AppProject ; `argocd admin settings rbac can ... --policy-file`.
+
+**Critères de réussite** :
+- [ ] Premier essai : `application 'flotte-web-team' in namespace 'flotte-apps' is not permitted to use project 'flotte'`
+- [ ] Après autorisation : `Synced` / `Healthy`, application listée `flotte-apps/flotte-web-team`
+- [ ] Application de `flotte-dev` ignorée (aucun statut) et explication
+- [ ] Objet RBAC `flotte/flotte-apps/flotte-web-team` ; effet de la règle `flotte/*` du Lab 03.2 expliqué
+
+---
+
+## Défi 04.6 ⭐⭐⭐ — `flotte-web` en Jsonnet paramétré (autonome)
+**Durée** : 20 min · **Objectif** : produire les manifestes d'un environnement par une fonction Jsonnet, paramétrée depuis l'Application
+**Contexte** : Helm et Kustomize sont connus de l'équipe ; ArgoCD propose aussi Jsonnet, sans plugin. L'équipe veut comparer.
+
+**Énoncé** :
+- Dans `flotte-config`, dossier `jsonnet/flotte-web/` : une bibliothèque `lib.libsonnet` (fonctions `deployment` et `service`) et un point d'entrée `main.jsonnet` = fonction `(env, replicas, tag)` qui renvoie un Deployment et un Service nommés `flotte-web-<env>`, message d'UI `Hexa Mobilite - <env>`.
+- Application `flotte-web-jsonnet` : environnement `recette`, 2 réplicas, destination `flotte-recette`, paramètres passés par l'Application (aucune valeur d'environnement dans le dépôt).
+- Passer `replicas` sans l'option de code et expliquer l'erreur.
+- Nettoyer : Application supprimée.
+
+**Indices** : `source.directory.jsonnet.tlas` (`name`, `value`, `code`) ; `source.directory.include` ; `jsonnet main.jsonnet --tla-str env=recette --tla-code replicas=2` pour tester en local (outil facultatif).
+
+**Critères de réussite** :
+- [ ] `Synced` / `Healthy`, Deployment `flotte-web-recette` à 2/2
+- [ ] `argocd app manifests flotte-web-jsonnet` : libellés `env: recette`
+- [ ] Erreur de type sur `replicas` expliquée
+
+---
+
 ## Bonus 🚀
 Ajouter dans `flotte-config` un sous-dossier `apps/flotte-web/extra/` contenant une ConfigMap `flotte-extra`, pousser, puis rafraîchir `flotte-web-dev` : la ConfigMap est-elle prise en compte ? Ajouter ensuite `source.directory.recurse: true` à l'Application et observer le changement de statut. Revenir enfin à l'état initial (sous-dossier supprimé, `directory` retiré).
