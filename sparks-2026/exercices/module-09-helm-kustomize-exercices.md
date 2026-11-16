@@ -152,5 +152,46 @@ Fichiers fournis : `labs/m09/` (structure finale de `flotte-config` : `apps/flot
 
 ---
 
+## Défi 09.6 ⭐⭐⭐ — Composants Kustomize et remplacements (autonome)
+**Durée** : 25 min · **Objectif** : activer des fonctionnalités à la carte par environnement et propager une valeur unique sans la recopier
+**Contexte** : la production doit passer sous autoscaling ; le `dev` veut des journaux en `debug` ; chaque pod doit porter le libellé de son environnement, défini une seule fois par overlay.
+
+**Énoncé** (structure du Lab 09.3) :
+- `apps/flotte-web/components/hpa/` : composant qui ajoute un HPA (`minReplicas: 3`, `maxReplicas: 8`, CPU 70 %, cible = le Rollout) et retire `spec.replicas` du Rollout.
+- `apps/flotte-web/components/debug/` : composant qui ajoute `PODINFO_LEVEL=debug` à la ConfigMap générée.
+- Overlay `prod` : composant `hpa` ; littéral `ENVIRONNEMENT=prod` dans la ConfigMap ; **remplacement** qui recopie cette valeur dans le libellé de pod `hexa-mobilite/environnement` du Rollout.
+- Overlay `dev` : composant `debug`.
+- Vérifier les rendus avec `kubectl kustomize` : nombre de réplicas du Rollout en `prod`, présence du HPA, libellé, niveau de journal en `dev`.
+- Synchroniser `prod` par ArgoCD (Défi 09.5, ou Application de test) et expliquer la santé obtenue.
+
+**Indices** : `kind: Component` (`apiVersion: kustomize.config.k8s.io/v1alpha1`) ; champ `components` de l'overlay ; `replacements` (`source.fieldPath`, `targets[].fieldPaths`, `options.create`) ; ordre d'application des transformations de l'overlay.
+
+**Critères de réussite** :
+- [ ] `prod` : HPA présent, **aucun** `replicas:` dans le Rollout (piège du bloc `replicas` de l'overlay expliqué)
+- [ ] Libellé `hexa-mobilite/environnement: prod` sur le gabarit de pod ; `PODINFO_LEVEL: debug` en `dev` seulement
+- [ ] Santé `Degraded` du HPA expliquée et solution proposée
+
+---
+
+## Défi 09.7 ⭐⭐⭐ — Chart Helm OCI et contrainte de version (autonome)
+**Durée** : 15 min · **Objectif** : consommer un chart publié dans un registre OCI et maîtriser les mises à jour par contrainte semver
+**Contexte** : les éditeurs publient de plus en plus leurs charts dans des registres OCI plutôt que dans des dépôts `index.yaml`. L'équipe veut aussi recevoir automatiquement les correctifs, mais pas les versions mineures.
+
+**Énoncé** :
+- Déclarer le registre `ghcr.io/stefanprodan/charts` (chart `podinfo`) dans ArgoCD et l'autoriser dans le projet `flotte`.
+- Application `flotte-web-oci` (namespace `flotte-oci`, release `flotte-web`, 1 réplica), synchronisation automatique.
+- Tester successivement les `targetRevision` `6.*`, `>=6.15.0 <6.17.0`, `~6.15.0` ; relever la version résolue.
+- Choisir la contrainte « correctifs seulement » et justifier ; expliquer le risque de `6.*`.
+- Nettoyer.
+
+**Indices** : `argocd repo add <REGISTRE> --type helm --enable-oci --name <NOM>` ; `repoURL` sans préfixe `oci://` ; `.status.sync.revision`.
+
+**Critères de réussite** :
+- [ ] Trois contraintes testées, versions résolues relevées (`6.17.0`, `6.16.0`, `6.15.0`)
+- [ ] Contrainte retenue justifiée (`~` vs `^` vs `*`)
+- [ ] Différence chart Git / chart OCI expliquée (révision affichée, traçabilité)
+
+---
+
 ## Bonus 🚀
 Activer `kustomize.buildOptions: --enable-helm` dans `argocd-cm` et décrire, dans un overlay de test, le chart podinfo via `helmCharts` (Kustomize). Comparer avec l'Application multi-sources du Lab 09.1 : lisibilité, emplacement des valeurs, effet global du réglage.
