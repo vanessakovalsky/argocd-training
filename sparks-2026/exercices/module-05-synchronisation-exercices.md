@@ -158,5 +158,45 @@ Fichiers fournis : `labs/m05/` (Application en synchronisation automatique, hook
 
 ---
 
+## Défi 05.6 ⭐⭐⭐ — Suppression sous confirmation humaine (autonome)
+**Durée** : 15 min · **Objectif** : garder `prune: true` tout en exigeant une validation pour les ressources sensibles
+**Contexte** : la ConfigMap `flotte-legacy` est lue par un ancien service de facturation. L'équipe veut que sa disparition de Git ne la supprime jamais sans accord explicite, alors que `flotte-web-dev` reste en synchronisation automatique avec élagage.
+
+**Énoncé** :
+- Ajouter `flotte-legacy` dans `apps/flotte-web/`, protégée par l'annotation de confirmation d'élagage ; pousser, vérifier sa création.
+- La retirer de Git, pousser : observer le statut de l'Application, de l'opération et de la ConfigMap.
+- Donner l'accord en ligne de commande ; retrouver la trace laissée sur l'Application.
+- Comparer avec `Prune=false` (une phrase) : quand préférer l'un ou l'autre ?
+
+**Indices** : annotation `argocd.argoproj.io/sync-options` ; `argocd app --help | grep -i confirm` ; `kubectl get app <APP> -n argocd -o jsonpath='{.metadata.annotations}'`.
+
+**Critères de réussite** :
+- [ ] Opération bloquée : `waiting for pruning confirmation of /ConfigMap/flotte-legacy`, ConfigMap toujours présente
+- [ ] Après accord : `Synced`, ConfigMap supprimée, annotation d'accord identifiée
+- [ ] Différence `Prune=confirm` / `Prune=false` expliquée
+
+---
+
+## Défi 05.7 ⭐⭐⭐ — Namespace géré par ArgoCD et Pod Security restreinte (autonome)
+**Durée** : 25 min · **Objectif** : imposer des libellés de namespace depuis l'Application, appliquer côté serveur, et rendre `flotte-web` conforme au profil `restricted`
+**Contexte** : la sécurité exige que chaque namespace applicatif applique le profil Pod Security `restricted` et porte le libellé d'équipe ; personne ne doit créer les namespaces à la main.
+
+**Énoncé** :
+- Application `flotte-web-secure` (copie de `apps/flotte-web/` dans `apps/flotte-web-secure/`), destination `flotte-secure` créée par ArgoCD avec les libellés `pod-security.kubernetes.io/enforce: restricted` et `hexa-mobilite/equipe: dev`, application côté serveur (*Server-Side Apply*).
+- Observer : statut de synchronisation, santé, pods ; retrouver la cause dans les événements.
+- Corriger les manifestes jusqu'à `Healthy` (au moins deux itérations attendues).
+- Identifier le gestionnaire de champs (*field manager*) du Deployment.
+- Changer le libellé d'équipe en `ops` dans l'Application : le namespace change-t-il seul ? Pourquoi ?
+
+**Indices** : `syncPolicy.managedNamespaceMetadata` ; option `ServerSideApply=true` ; `kubectl get events -n flotte-secure` ; `kubectl get deploy -n flotte-secure --show-managed-fields -o yaml`.
+
+**Critères de réussite** :
+- [ ] Namespace créé avec les deux libellés
+- [ ] Premier déploiement : `Synced` mais pods refusés (`violates PodSecurity "restricted:latest"`), cause expliquée
+- [ ] `Synced` / `Healthy` après correction ; gestionnaire `argocd-controller` (opération `Apply`)
+- [ ] Comportement du changement de libellé expliqué
+
+---
+
 ## Bonus 🚀
 Ajouter un hook `SyncFail` (Job qui affiche « Echec de synchronisation flotte-web ») et le déclencher avec une migration en échec. Puis suspendre l'automatisme (`automated.enabled: false`) et vérifier qu'un nouveau commit n'est plus déployé tant qu'il n'est pas réactivé.
