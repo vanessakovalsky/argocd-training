@@ -123,5 +123,47 @@ Contexte CLI administrateur : `argocd context localhost:8443`. Dépôt `flotte-c
 
 ---
 
+## Défi 06.5 ⭐⭐⭐ — Gel des déploiements et dérogation d'urgence (autonome)
+**Durée** : 20 min · **Objectif** : bloquer les livraisons automatiques sur une période, tout en gardant une porte de secours contrôlée
+**Contexte** : *Hexa Mobilité* gèle les livraisons pendant la clôture mensuelle. Les commits continuent, rien ne doit partir automatiquement ; seule une correction critique peut être poussée, par une action manuelle.
+
+**Énoncé** :
+- Ajouter au projet `flotte` une fenêtre `deny` active maintenant (24 h), valable pour toutes les applications, synchronisation manuelle autorisée.
+- Pousser un changement d'image : vérifier qu'il n'est pas déployé, lire l'information de fenêtre dans `argocd app get`.
+- Déployer quand même par une synchronisation manuelle.
+- Retirer l'autorisation manuelle, pousser un second changement, tenter de synchroniser : relever le message.
+- Supprimer la fenêtre et vérifier le rattrapage automatique.
+
+**Indices** : `argocd proj windows --help` (`add`, `list`, `disable-manual-sync`, `delete`) ; syntaxe cron + durée ; champ `spec.syncWindows` de l'AppProject pour la version déclarative.
+
+**Critères de réussite** :
+- [ ] `argocd proj windows list flotte` : fenêtre `deny` `Active`, `MANUALSYNC Enabled`
+- [ ] Commit non déployé, `SyncWindow: Manual Allowed` ; synchronisation manuelle réussie
+- [ ] Sans dérogation : `cannot sync: blocked by sync window`
+- [ ] Fenêtre supprimée : second changement déployé sans action
+
+---
+
+## Défi 06.6 ⭐⭐⭐ — Promotion par tag mobile : pratique ou piège ? (autonome)
+**Durée** : 20 min · **Objectif** : comparer promotion par déplacement d'un tag Git et promotion par commit, sous l'angle du rollback et de l'audit
+**Contexte** : une équipe voisine promeut en production en déplaçant un tag `prod` ; le rollback consiste à remettre le tag sur la version précédente. *Hexa Mobilité* hésite à l'imiter.
+
+**Énoncé** :
+- Poser les tags annotés `v1.0.0` (image `6.16.0`) puis `v1.1.0` (image `6.17.0`) sur deux commits de `flotte-config`, et un tag léger `prod` sur `v1.0.0`.
+- Application `flotte-web-prod` (namespace `flotte-prod`) qui suit `prod`, synchronisation automatique.
+- Promouvoir `v1.1.0` en déplaçant `prod` ; noter le délai de prise en compte avec et sans rafraîchissement.
+- Revenir à `v1.0.0` en redéplaçant le tag ; comparer `argocd app history` et `git log`.
+- Conclure en 5 lignes : où se trouve la trace de la promotion et du rollback ? Proposer l'alternative recommandée.
+- Nettoyer : Application et namespace supprimés, tag `prod` supprimé du dépôt distant.
+
+**Indices** : `git tag -f`, `git push -f origin prod`, `git push origin :refs/tags/prod` ; `<TAG>^{}` désigne le commit d'un tag annoté.
+
+**Critères de réussite** :
+- [ ] Promotion puis rollback effectifs (image `6.17.0` puis `6.16.0`)
+- [ ] Historique ArgoCD : trois entrées `prod (<SHA>)`, SHA initial réapparu
+- [ ] Analyse : trace absente de l'historique Git, alternative argumentée
+
+---
+
 ## Bonus 🚀
 Modifier uniquement `PODINFO_UI_MESSAGE` dans `configmap.yaml` (sans changer l'image), pousser, puis comparer le message de la ConfigMap et celui servi par l'application (`curl` via `port-forward`). Expliquer l'écart et proposer deux solutions.
