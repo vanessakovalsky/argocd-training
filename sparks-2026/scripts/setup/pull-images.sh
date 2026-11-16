@@ -4,13 +4,20 @@
 set -eu
 DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$DIR/versions.env"
-ENGINE=docker; command -v docker >/dev/null 2>&1 || ENGINE=podman
+if docker info >/dev/null 2>&1; then ENGINE=docker
+elif podman info >/dev/null 2>&1; then ENGINE=podman
+else echo "Neither docker nor podman responds" >&2; exit 1; fi
+echo "engine: $ENGINE"
 
 MANIFEST="https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml"
 IMAGES="$K8S_NODE_IMAGE $(curl -fsSL "$MANIFEST" | awk '/^ *image:/ {print $2}' | sort -u)"
 for t in $PODINFO_TAGS; do IMAGES="$IMAGES $PODINFO_IMAGE:$t"; done
 
+qualify() { # podman refuses short names: add docker.io/ when the first component is not a registry
+  case "${1%%/*}" in *.*|*:*|localhost) echo "$1" ;; *) [ "$1" = "${1#*/}" ] && echo "docker.io/library/$1" || echo "docker.io/$1" ;; esac
+}
 for img in $IMAGES; do
+  [ "$ENGINE" = podman ] && img="$(qualify "$img")"
   echo "pull $img"
   "$ENGINE" pull -q "$img" >/dev/null
 done
