@@ -148,5 +148,49 @@ Variables : `<VALEUR>` = clé fictive choisie (ex. `hexa-dev-0001`).
 
 ---
 
+## Défi 11.6 ⭐⭐⭐ — N'accepter que des commits signés (autonome)
+**Durée** : 25 min · **Objectif** : empêcher le déploiement d'une révision de `flotte-config` qui n'est pas signée par une clé GPG approuvée
+**Contexte** : un jeton GitLab volé suffirait à pousser un manifeste malveillant dans `flotte-config`. *Hexa Mobilité* veut qu'ArgoCD refuse tout commit non signé par l'équipe ops.
+
+**Énoncé** (dans un `GNUPGHOME` dédié, jamais sa clé personnelle) :
+- Générer une clé de signature `Ops Flotte` (ed25519, sans phrase de passe, validité 1 jour) ; l'importer dans ArgoCD.
+- Exiger cette clé pour toutes les Applications du projet `flotte`.
+- Pousser un commit non signé : relever statut et message.
+- Pousser un commit signé avec la clé `Ops Flotte` : obtenir le déploiement (attention à l'opération déjà en cours).
+- Pousser un commit signé avec une autre clé : relever le message.
+- Retirer l'exigence du projet en fin de défi (les labs suivants poussent des commits non signés).
+
+**Indices** : `gpg --batch --passphrase '' --quick-gen-key` ; `argocd gpg add --from <FICHIER>` ; champ `spec.signatureKeys` de l'AppProject ; `git commit -S` avec `user.signingkey` ; `argocd app terminate-op`.
+
+**Critères de réussite** :
+- [ ] Non signé : `GIT/GPG: Failed verifying revision <SHA> by '<AUTEUR>': unsigned`
+- [ ] Clé inconnue : `signed with key not in keyring (key_id=<ID>)`
+- [ ] Commit signé `Ops Flotte` : `Synced` / `Healthy`
+- [ ] Limite expliquée : quels commits ArgoCD vérifie-t-il réellement ?
+
+---
+
+## Défi 11.7 ⭐⭐⭐ — Rotation de la clé Sealed Secrets (autonome)
+**Durée** : 20 min · **Objectif** : renouveler la clé de chiffrement du contrôleur, rechiffrer les SealedSecrets de Git, puis retirer l'ancienne clé sans casse
+**Contexte** : la clé privée exportée à l'exercice 11.2 a circulé sur un poste non maîtrisé. La sécurité exige une nouvelle clé et le retrait de l'ancienne.
+
+**Énoncé** :
+- Relever les clés du contrôleur et l'empreinte du certificat public.
+- Forcer la création d'une nouvelle clé sans attendre le renouvellement automatique ; vérifier que le certificat publié change.
+- Vérifier que les SealedSecrets existants se déchiffrent toujours.
+- Rechiffrer le SealedSecret de `dev` (et de `recette`) avec la nouvelle clé, sans connaître la valeur en clair ; committer.
+- Retirer l'ancienne clé ; prouver qu'un SealedSecret **non** rechiffré n'est plus lisible et que le rechiffré l'est.
+- Expliquer ce que la rotation de clé ne protège pas.
+
+**Indices** : variable `SEALED_SECRETS_KEY_CUTOFF_TIME` du contrôleur (format RFC 1123, `date -R`) ; `kubeseal --fetch-cert` ; `kubeseal --re-encrypt` ; Secrets étiquetés `sealedsecrets.bitnami.com/sealed-secrets-key` dans `kube-system`.
+
+**Critères de réussite** :
+- [ ] Deux clés listées, nouveau certificat publié
+- [ ] SealedSecrets rechiffrés et poussés (chiffré différent, valeur identique)
+- [ ] Ancienne clé retirée : ancien scellé → `no key could decrypt secret`, nouveau scellé → Secret présent
+- [ ] Limite expliquée (valeur du secret, historique Git)
+
+---
+
 ## Bonus 🚀
 Lire l'exemple `labs/m11/oidc-config-example.yaml` et le comparer au connecteur Dex GitLab du Défi 03.6 : quel composant d'ArgoCD est utilisé dans chaque cas, où vit le secret client, comment les groupes arrivent dans le RBAC.
