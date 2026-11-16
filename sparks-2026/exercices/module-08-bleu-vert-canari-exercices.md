@@ -137,5 +137,45 @@ Fichiers fournis : `labs/m08/` (Rollout canari, recette bleu-vert, analyse). Con
 
 ---
 
+## Défi 08.6 ⭐⭐⭐ — Migrer un Deployment existant vers un Rollout sans coupure (autonome)
+**Durée** : 25 min · **Objectif** : adopter Argo Rollouts sur une application en production sans recréer ses pods ni interrompre le service
+**Contexte** : d'autres applications d'*Hexa Mobilité* tournent en Deployment classique ; supprimer le Deployment pour le remplacer par un Rollout provoquerait une coupure.
+
+**Énoncé** :
+- Application `flotte-web-mig` (namespace `flotte-mig`, synchronisation automatique **avec self-heal**) : Deployment `flotte-web` (3 réplicas, `podinfo:6.16.0`) et Service, issus d'un dossier `apps/flotte-web-mig/` de `flotte-config`.
+- Lancer dans `flotte-mig` une sonde qui interroge le Service chaque seconde et journalise `OK` / `KO`.
+- Ajouter un Rollout qui **référence** le Deployment existant (sans recopier le gabarit de pod), réduction progressive de l'ancien.
+- Observer pendant 2 minutes : réplicas du Deployment, statut de l'Application, opérations de synchronisation. Expliquer le conflit, puis le résoudre dans Git.
+- Compter les `KO` de la sonde. Nettoyer.
+
+**Indices** : champ `spec.workloadRef` du Rollout (`apiVersion`, `kind`, `name`, `scaleDown`) ; `argocd app diff` ; `.status.operationState.finishedAt`.
+
+**Critères de réussite** :
+- [ ] Rollout `Healthy` à 3 réplicas, Deployment à `0/0`
+- [ ] Conflit self-heal / Rollouts identifié (différence `replicas: 0` / `replicas: 3`) puis résolu : `Synced` / `Healthy`
+- [ ] Sonde : 0 `KO` pendant toute la migration
+
+---
+
+## Défi 08.7 ⭐⭐⭐ — Bleu-vert : analyse de la preview avant bascule (autonome)
+**Durée** : 20 min · **Objectif** : automatiser la validation de recette : bascule automatique si la preview répond, aucune bascule sinon
+**Contexte** : en recette (exercice 08.4), la promotion est manuelle. L'équipe veut une promotion automatique 20 s après une vérification réussie de la preview, et aucun trafic vers une version qui échoue.
+
+**Énoncé** :
+- `AnalysisTemplate` `flotte-preview-check` : 3 appels HTTP (toutes les 5 s, aucun échec toléré) vers le service preview, chemin passé en **argument** (`/readyz` par défaut).
+- Rollout de recette : analyse avant promotion, promotion automatique au bout de 20 s.
+- Livrer `6.17.0` : relever la chronologie (analyse, pause, bascule) et le hash du service actif à chaque étape.
+- Livrer `6.15.0` avec l'argument `/status/500` : relever le message, le service actif, la santé de l'Application.
+- Revenir à l'état sain par Git uniquement.
+
+**Indices** : `strategy.blueGreen.prePromotionAnalysis` (`templates`, `args`) ; `autoPromotionSeconds` ; `{{args.<NOM>}}` dans le gabarit ; `kubectl get analysisrun -n flotte-recette`.
+
+**Critères de réussite** :
+- [ ] `6.17.0` : `AnalysisRun` `Successful`, puis `BlueGreenPause`, puis bascule automatique du service actif
+- [ ] `6.15.0` : `RolloutAborted ... pre-promotion analysis ... Metric "preview" assessed Failed`, service actif inchangé
+- [ ] Après `git revert` : Rollout et Application `Healthy`, `6.17.0` active
+
+---
+
 ## Bonus 🚀
 Ouvrir le tableau de bord d'Argo Rollouts (`kubectl argo rollouts dashboard`, puis `http://localhost:3100`) et comparer sa vue d'un canari en pause avec celle de l'UI ArgoCD.
