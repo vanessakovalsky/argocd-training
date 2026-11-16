@@ -231,5 +231,45 @@ Puis tenter de supprimer `test-ok`. Terminer en supprimant `test-ok` depuis le c
 
 ---
 
+## Défi 03.7 ⭐⭐⭐ — Politique RBAC testée comme du code (autonome)
+**Durée** : 20 min · **Objectif** : exprimer des exceptions par `deny` et l'héritage de rôles, puis prouver la politique par un test automatisé
+**Contexte** : *Hexa Mobilité* prépare une application `flotte-web-prod`. L'équipe dev ne doit plus y toucher ; `ops-bob` n'a plus besoin de `role:admin` complet. Toute modification de la politique passera en merge request, avec un test exécuté par la CI.
+
+**Énoncé** (fichier `policy.csv` local, sans toucher au cluster) :
+- `role:dev` : droits du Lab 03.2, **sauf** `sync` et `update` sur toute application `flotte/*-prod` (lecture conservée).
+- `role:ops` (remplace `role:admin` pour `ops-bob`) : hérite de `role:readonly`, tous les droits sur les applications et les projets, **sauf** la suppression d'un projet ; aucune modification des clusters.
+- Script `test-rbac.sh <POLICY_FILE>` : une matrice d'au moins 10 cas `attendu / sujet / action / ressource / objet`, une ligne `OK` ou `FAIL` par cas, code retour `1` au premier écart.
+- Preuve que le test protège : retirer une ligne `deny`, relancer, constater l'échec.
+
+**Indices** : `argocd admin settings rbac can <SUJET> <ACTION> <RESSOURCE> <OBJET> --policy-file <FICHIER>` ; un rôle peut être affecté à un autre rôle (ligne `g`) ; `deny` l'emporte sur `allow`.
+
+**Critères de réussite** :
+- [ ] `dev-alice` : `sync flotte/flotte-web` → yes, `sync flotte/flotte-web-prod` → no, `get flotte/flotte-web-prod` → yes
+- [ ] `ops-bob` : `delete applications default/guestbook` → yes, `delete projects flotte` → no, `update clusters` → no
+- [ ] `./test-rbac.sh policy.csv` → code retour `0` ; politique modifiée → code retour `1`
+
+---
+
+## Défi 03.8 ⭐⭐⭐ — Synchroniser sous un compte de service limité (autonome)
+**Durée** : 25 min · **Objectif** : remplacer les droits `cluster-admin` du contrôleur par un compte de service par destination (impersonation, ArgoCD 2.13+)
+**Contexte** : l'audit de sécurité relève que le contrôleur applique tout manifeste avec des droits `cluster-admin`. Pour `flotte-dev`, seuls les Deployments, Services et ConfigMaps sont légitimes.
+
+**Énoncé** :
+- Activer l'impersonation (`argocd-cm`).
+- Créer dans `flotte-dev` le compte de service `flotte-deployer` et un Role limité aux Deployments, Services et ConfigMaps.
+- Associer `flotte-deployer` à la destination `flotte-dev` du projet `flotte`.
+- Vérifier que l'application du fil rouge se synchronise toujours ; ajouter ensuite un Job (ou un Secret) dans `flotte-config` et constater le refus.
+- **Obligatoire en fin de défi** : revenir à l'état initial (impersonation désactivée, champ retiré du projet), sinon les hooks du M05 échoueront.
+
+**Indices** : clé `application.sync.impersonation.enabled` ; champ `spec.destinationServiceAccounts` de l'AppProject (`server`, `namespace`, `defaultServiceAccount`) ; message à chercher dans `argocd app get <APP>`.
+
+**Critères de réussite** :
+- [ ] Synchronisation réussie avec les seules ressources autorisées
+- [ ] Ressource non autorisée refusée : `... is forbidden: User "system:serviceaccount:flotte-dev:flotte-deployer" cannot ...`
+- [ ] Projet sans `destinationServiceAccounts`, impersonation active → `no matching service account found for destination ...` (expliquer pourquoi)
+- [ ] État initial restauré
+
+---
+
 ## Bonus 🚀
 Désactiver le compte `admin` (`admin.enabled: "false"`) après avoir vérifié que `ops-bob` dispose de `role:admin`. Prouver que `admin` est refusé, que `ops-bob` peut tout faire, puis réactiver `admin` pour la suite de la formation (les scripts de rattrapage l'utilisent).
