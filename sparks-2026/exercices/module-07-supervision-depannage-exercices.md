@@ -155,5 +155,46 @@ Pour chaque diagnostic, relever : statuts Sync / Health, ressource en cause, mes
 
 ---
 
+## Défi 07.6 ⭐⭐⭐ — Santé d'une ressource personnalisée en Lua (autonome)
+**Durée** : 25 min · **Objectif** : apprendre à ArgoCD à évaluer la santé d'un type de ressource qu'il ne connaît pas
+**Contexte** : l'équipe logistique d'*Hexa Mobilité* a créé une CRD `Livraison` (groupe `hexa-mobilite.io`) ; un opérateur renseigne `status.phase` (`EnAttente`, `EnCours`, `Livree`, `Echec`). Dans ArgoCD, ces objets n'ont aucune santé : une tournée en échec passe inaperçue.
+
+**Énoncé** :
+- Installer la CRD fournie (corrigé, ou à écrire : `spec.vehicule`, `spec.destination`, `status.phase`, `status.message`, sous-ressource `status`).
+- Déployer par ArgoCD une `Livraison` `tournee-lyon-01` (Application `livraisons`, namespace `flotte-livraison`) : constater l'absence de santé.
+- Écrire la règle de santé Lua : pas de statut → `Progressing` ; `Livree` → `Healthy` ; `Echec` → `Degraded` ; `EnAttente` → `Suspended` ; sinon `Progressing` ; message = `status.message`.
+- La tester **hors cluster** sur un fichier YAML, puis l'appliquer.
+- Simuler l'opérateur (modifier le statut) pour chaque phase et relever la santé de l'Application.
+- Nettoyer : Application, CRD et règle supprimées.
+
+**Indices** : clé `resource.customizations.health.<GROUPE>_<KIND>` de `argocd-cm` ; `argocd admin settings resource-overrides health <FICHIER> --argocd-cm-path <FICHIER>` ; `kubectl patch ... --subresource=status`.
+
+**Critères de réussite** :
+- [ ] Test hors cluster : `STATUS: Degraded`, `MESSAGE: <message>` pour une phase `Echec`
+- [ ] Santé de l'Application : `Progressing` → `Degraded` → `Healthy` selon la phase
+- [ ] Explication : pourquoi la santé d'une seule ressource change celle de toute l'Application
+
+---
+
+## Défi 07.7 ⭐⭐⭐ — Quand ArgoCD lui-même tombe en panne (autonome)
+**Durée** : 20 min · **Objectif** : reconnaître la panne de chaque composant d'ArgoCD à ses symptômes, et savoir ce qui continue de fonctionner
+**Contexte** : l'astreinte d'*Hexa Mobilité* reçoit « ArgoCD ne déploie plus ». Avant de chercher dans les applications, il faut savoir si l'outil lui-même est sain.
+
+**Énoncé** (sur son propre cluster, une panne à la fois, réparer avant la suivante) :
+- Panne 1 : `argocd-repo-server` arrêté (`--replicas=0`). Rafraîchir une application ; relever statut et condition.
+- Panne 2 : `argocd-application-controller` arrêté. Pousser un commit, rafraîchir, synchroniser (prévoir `timeout 20`) ; relever ce qui se passe. Redémarrer et observer.
+- Panne 3 : `argocd-redis` arrêté. Tester `argocd app list` et `argocd app get` ; chercher la trace dans les journaux.
+- Remplir le tableau : composant, symptôme visible, preuve dans les journaux, impact sur les applications déjà déployées.
+
+**Indices** : `kubectl scale deploy|sts ... -n argocd --replicas=0|1` ; `.status.reconciledAt` et `.operation` de l'Application ; `kubectl logs ... --since=1m`.
+
+**Critères de réussite** :
+- [ ] Panne 1 : `ComparisonError ... failed to generate manifest ... Unavailable` identifiée
+- [ ] Panne 2 : statut figé (`reconciledAt` ancien), commande bloquée, opération en attente exécutée au redémarrage
+- [ ] Panne 3 : API utilisable, erreurs `redis: connection pool` dans le contrôleur
+- [ ] Tableau complet ; tous les composants revenus à 1 réplica
+
+---
+
 ## Bonus 🚀
 Ajouter un trigger `flotte-sync-failed` (phase d'opération `Error` ou `Failed`) envoyé au même webhook, l'abonner, puis le déclencher avec la panne B. Mesurer le délai entre le push et la notification, et l'expliquer.
