@@ -120,5 +120,46 @@ grep -c 'kind: Secret' argocd-backup.yaml
 
 ---
 
+## Défi 12.6 ⭐⭐⭐ — Environnements × régions : générateur matrix (autonome)
+**Durée** : 25 min · **Objectif** : croiser deux générateurs et différencier la politique de synchronisation par environnement
+**Contexte** : *Hexa Mobilité* ouvre deux régions (`nord`, `sud`). Chaque environnement existe dans chaque région ; `sud` a plus de trafic. Seul `dev` se synchronise automatiquement.
+
+**Énoncé** :
+- ApplicationSet `flotte-regions` : générateur `matrix` = dossiers d'overlays `dev` et `recette` × liste `{region: nord, replicas: 1}`, `{region: sud, replicas: 2}`.
+- Applications `flotte-web-<ENV>-<REGION>`, namespace `flotte-<ENV>-<REGION>`, libellés `env` et `region`, nombre de réplicas imposé depuis le générateur (sans toucher aux overlays).
+- Synchronisation automatique pour `dev` uniquement, par un patch de modèle conditionnel.
+- Vérifier : 4 Applications, politiques de synchronisation, réplicas par région.
+- Nettoyer (suppression de l'ApplicationSet et de ses Applications).
+
+**Indices** : `generators[].matrix.generators` ; `source.kustomize.replicas` ; `templatePatch` (chaîne Go template rendue avant lecture du YAML) ; `{{- if eq .path.basename "dev" }}`.
+
+**Critères de réussite** :
+- [ ] Conditions `ErrorOccurred=False`, `ParametersGenerated=True`, `ResourcesUpToDate=True`
+- [ ] `dev-*` en `Auto-Prune`, `recette-*` en `Manual`
+- [ ] Deployment à 1 réplica en `nord`, 2 en `sud`
+- [ ] Erreur de syntaxe rencontrée sur un nombre dans le modèle expliquée
+
+---
+
+## Défi 12.7 ⭐⭐⭐ — Livraison progressive entre Applications (autonome)
+**Durée** : 20 min · **Objectif** : ordonner la synchronisation des Applications d'un ApplicationSet : toutes les `dev` d'abord, `recette` ensuite
+**Contexte** : un changement dans la base Kustomize part aujourd'hui partout en même temps. L'équipe veut que `recette` attende que `dev` soit saine (*Progressive Syncs*, bêta).
+
+**Énoncé** (à partir du Défi 12.6, synchronisation automatique pour tous) :
+- Activer les Progressive Syncs dans le contrôleur d'ApplicationSet.
+- Stratégie `RollingSync` : étape 1 = libellé `env=dev`, étape 2 = `env=recette` (au plus une Application à la fois).
+- Relever la politique de synchronisation réellement appliquée aux Applications générées.
+- Pousser un changement d'image dans la base ; échantillonner toutes les 10 s le statut par Application (`.status.applicationStatus` de l'ApplicationSet) et l'image déployée par namespace.
+- Désactiver la fonctionnalité et nettoyer.
+
+**Indices** : clé `applicationsetcontroller.enable.progressive.syncs` de `argocd-cmd-params-cm` ; `spec.strategy.rollingSync.steps[].matchExpressions`, `maxUpdate`.
+
+**Critères de réussite** :
+- [ ] Applications générées : `automated.enabled: false` (pilotage par le contrôleur) expliqué
+- [ ] Chronologie : images `dev` mises à jour avant celles de `recette`, statuts `Waiting` → `Progressing` → `Healthy`
+- [ ] Limite « bêta » et différence avec un canari Argo Rollouts (M08) expliquées
+
+---
+
 ## Bonus 🚀
 Lire la page *Source Hydrator* de la documentation (fonctionnalité bêta depuis 3.5) et expliquer en trois lignes ce qu'elle changerait pour la relecture des merge requests de `flotte-config`.
