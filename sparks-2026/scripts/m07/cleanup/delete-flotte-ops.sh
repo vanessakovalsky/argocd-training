@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Remove the M07 supervision tools (webhook receiver, Prometheus) and notification settings.
+# Remove the M07 supervision tools (webhook receiver, Prometheus, Grafana) and notification settings.
 set -eu
 kubectl delete namespace flotte-ops --ignore-not-found
 kubectl patch cm argocd-notifications-cm -n argocd --type merge -p \
